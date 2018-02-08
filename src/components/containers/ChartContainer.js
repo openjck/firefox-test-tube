@@ -8,70 +8,64 @@ export default class extends React.Component {
     constructor(props) {
         super(props);
 
-        // See https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
-        this.colors = [
-            { r: 74, g: 144, b: 226 },
-            { r: 230, g: 25, b: 75 },
-            { r: 60, g: 180, b: 75 },
-            { r: 255, g: 255, b: 25 },
-            { r: 245, g: 130, b: 49 },
-            { r: 145, g: 30, b: 180 },
-            { r: 70, g: 240, b: 240 },
-            { r: 250, g: 190, b: 190 },
-        ];
-
-        // Outlier constants
-        this.outliersThreshold = 10;
-        this.outliersSmallestProportion = 0.01;
-
         this.chartType = this._getChartType(props.type);
 
         if (this.chartType !== 'unsupported') {
-            this.dataPack = this._createDataPack(props.unformattedData, this.chartType);
+            // See https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
+            this.colors = [
+                { r: 74, g: 144, b: 226 },
+                { r: 230, g: 25, b: 75 },
+                { r: 60, g: 180, b: 75 },
+                { r: 255, g: 255, b: 25 },
+                { r: 245, g: 130, b: 49 },
+                { r: 145, g: 30, b: 180 },
+                { r: 70, g: 240, b: 240 },
+                { r: 250, g: 190, b: 190 },
+            ];
+
+            // Outlier constants
+            this.outliersThreshold = 10;
+            this.outliersSmallestProportion = 0.01;
+
+            this.formattedData = this._formatData(props.unformattedData, this.chartType);
+
+            // Set the min and max x values that should be shown when outliers
+            // are hidden
+            if (this.chartType === 'line' && this._biggestPopulationSize(props.unformattedData) > this.outliersThreshold) {
+                this.trimmedMinX = this._getTrimmedMinX(this.formattedData);
+                this.trimmedMaxX = this._getTrimmedMaxX(this.formattedData);
+            }
         }
     }
 
     /**
-     * Return a "data pack". A data pack is an object of data formatted for use
-     * with Chart.js, organized by whether or not the data has been trimmed to
-     * remove outliers.
-     *
-     * Example output:
-     *
-     *     {
-     *         all: [...] // Formatted data with all data points present
-     *         trimmed: [...] // Formatted data with outlying data points removed
-     *     }
+     * Format data for use in Chart.js.
      *
      * If a "line type" metric has too few data points, it will be formatted for
      * use as a bar chart instead. this.chartType will also be changed
      * accordingly.
      */
-    _createDataPack(data, chartType) {
-        const dataPack = {};
-
+    _formatData(data, chartType) {
         // The minimum number of data points that the biggest population of a
         // "line type" metric must have in order for it to be rendered as a line
         // chart. If the biggest population has fewer than this many data
         // points, it will be rendered as a bar chart instead.
         const minLinePoints = 21;
 
+        let dataFormattingMethod;
+
         if (chartType === 'bar') {
-            dataPack.all = this._formatBarData(data);
+            dataFormattingMethod = this._formatBarData;
         } else if (chartType === 'line') {
             if (this._biggestPopulationSize(data) >= minLinePoints) {
-                dataPack.all = this._formatLineData(data, true);
-
-                if (this._biggestPopulationSize(data) >= this.outliersThreshold) {
-                    dataPack.trimmed = this._formatLineData(data, false);
-                }
+                dataFormattingMethod = this._formatLineData;
             } else {
-                dataPack.all = this._formatBarData(data, true);
+                dataFormattingMethod = data => this._formatBarData(data, true);
                 this.chartType = 'bar';
             }
         }
 
-        return dataPack;
+        return dataFormattingMethod(data);
     }
 
     /**
@@ -86,7 +80,7 @@ export default class extends React.Component {
      *
      * @param  data  The raw JSON from /metric/[id]
      */
-    _formatLineData = (data, showOutliers) => {
+    _formatLineData = data => {
         const formattedData = {
             datasets: [],
         };
@@ -103,12 +97,12 @@ export default class extends React.Component {
             // The API provides y values as numbers between 0 and 1, but we want
             // to display them as percentages.
             population.data.forEach((dataPoint, index) => {
-                resultData.push({x: index, xActualValue: dataPoint.x, y: dataPoint.y * 100});
+                resultData.push({x: index, xActualValue: Number(dataPoint.x), y: dataPoint.y * 100});
             });
 
             formattedData.datasets.push({
                 label: population.name,
-                data: showOutliers ? resultData : this._removeOutliers(resultData),
+                data: resultData,
 
                 // What d3 calls curveStepBefore
                 steppedLine: 'before',
@@ -196,6 +190,31 @@ export default class extends React.Component {
         }
     }
 
+    _getTrimmedMinX(data) {
+        let smallestValue;
+        let indexOfSmallestValue;
+        data.datasets.forEach(population => {
+            population.data.forEach((dataPoint, index) => {
+                if (!smallestValue || dataPoint.xActualValue < smallestValue) {
+                    smallestValue = xActualValue;
+                    indexOfSmallestValue = index;1
+                }
+            });
+        });
+
+
+
+
+
+        const smallestXValue = Math.min(...data.datasets.map(ds => Math.min(...ds.data.map(dp => dp.xActualValue))));
+        return smallestXValue + (smallestXValue * this.outliersSmallestProportion);
+    }
+
+    _getTrimmedMaxX(data) {
+        const biggestXValue = Math.max(...data.datasets.map(ds => Math.max(...ds.data.map(dp => dp.xActualValue))));
+        return biggestXValue - (biggestXValue * (1 - this.outliersSmallestProportion));
+    }
+
     // Return an array with buckets with data less than the
     // `outliersSmallestProportion` trimmed from the right.
     _removeOutliers(data) {
@@ -214,11 +233,10 @@ export default class extends React.Component {
         if (this.chartType === 'unsupported') {
             return <Error message={`Unsupported metric type: ${this.props.type}`} showPageTitle={false} />;
         } else {
-            let dataToShow;
-            if (this.props.showOutliers === false && this.dataPack.trimmed) {
-                dataToShow = this.dataPack.trimmed;
-            } else {
-                dataToShow = this.dataPack.all;
+            const extraProps = {};
+            if (this.props.showOutliers === false) {
+                extraProps.minX = this.trimmedMinX;
+                extraProps.maxX = this.trimmedMaxX;
             }
 
             return (
@@ -226,7 +244,9 @@ export default class extends React.Component {
                     {...this.props}
 
                     chartType={this.chartType}
-                    data={dataToShow}
+                    data={this.formattedData}
+
+                    {...extraProps}
                 />
             );
         }

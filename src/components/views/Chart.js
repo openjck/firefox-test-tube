@@ -64,6 +64,8 @@ export default props => {
                                 labelString: xUnit,
                             },
                             ticks: {
+                                min: props.minX,
+                                max: props.maxX,
                                 stepSize: 1,
                                 maxTicksLimit: 10,
                                 callback: xLabel => {
