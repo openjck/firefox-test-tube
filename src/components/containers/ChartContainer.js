@@ -20,15 +20,58 @@ export default class extends React.Component {
             { r: 250, g: 190, b: 190 },
         ];
 
-        // Show outliers toggle constants.
+        // Outlier constants
         this.outliersThreshold = 10;
         this.outliersSmallestProportion = 0.01;
+
+        this.chartType = this._getChartType(props.type);
+
+        if (this.chartType !== 'unsupported') {
+            this.dataPack = this._createDataPack(props.unformattedData, this.chartType);
+        }
+    }
+
+    /**
+     * Return a "data pack". A data pack is an object of data formatted for use
+     * with Chart.js, organized by whether or not the data has been trimmed to
+     * remove outliers.
+     *
+     * Example output:
+     *
+     *     {
+     *         all: [...] // Formatted data with all data points present
+     *         trimmed: [...] // Formatted data with outlying data points removed
+     *     }
+     *
+     * If a "line type" metric has too few data points, it will be formatted for
+     * use as a bar chart instead. this.chartType will also be changed
+     * accordingly.
+     */
+    _createDataPack(data, chartType) {
+        const dataPack = {};
 
         // The minimum number of data points that the biggest population of a
         // "line type" metric must have in order for it to be rendered as a line
         // chart. If the biggest population has fewer than this many data
         // points, it will be rendered as a bar chart instead.
-        this.minLinePoints = 21;
+        const minLinePoints = 21;
+
+        if (chartType === 'bar') {
+            dataPack.all = this._formatBarData(data);
+        } else if (chartType === 'line') {
+            if (this._biggestPopulationSize(data) >= minLinePoints) {
+                dataPack.all = this._formatLineData(data, true);
+
+                if (this._biggestPopulationSize(data) >= this.outliersThreshold) {
+                    dataPack.trimmed = this._formatLineData(data, false);
+                }
+            } else {
+                dataPack.all = this._formatBarData(data, true);
+                this.chartType = 'bar';
+            }
+        }
+
+        return dataPack;
     }
 
     /**
@@ -43,7 +86,7 @@ export default class extends React.Component {
      *
      * @param  data  The raw JSON from /metric/[id]
      */
-    _formatLineData = data => {
+    _formatLineData = (data, showOutliers) => {
         const formattedData = {
             datasets: [],
         };
@@ -65,7 +108,7 @@ export default class extends React.Component {
 
             formattedData.datasets.push({
                 label: population.name,
-                data: this.props.showOutliers ? resultData : this._removeOutliers(resultData),
+                data: showOutliers ? resultData : this._removeOutliers(resultData),
 
                 // What d3 calls curveStepBefore
                 steppedLine: 'before',
@@ -128,7 +171,7 @@ export default class extends React.Component {
         return formattedData;
     }
 
-    _getMetricType(type) {
+    _getChartType(metricType) {
         const lineTypes = [
             'CountHistogram',
             'EnumeratedHistogram',
@@ -144,15 +187,18 @@ export default class extends React.Component {
             'FlagHistogram',
         ];
 
-        if (lineTypes.includes(type)) return 'line';
-        if (barTypes.includes(type)) return 'bar';
+        if (lineTypes.includes(metricType)) {
+            return 'line';
+        } else if (barTypes.includes(metricType)) {
+            return 'bar';
+        } else {
+            return 'unsupported';
+        }
     }
 
     // Return an array with buckets with data less than the
     // `outliersSmallestProportion` trimmed from the right.
     _removeOutliers(data) {
-        if (data.length <= this.outliersThreshold) return data;
-
         let indexLast = data.length - 1;
         for (; indexLast >= 0; indexLast--) {
           if (data[indexLast]['y'] > this.outliersSmallestProportion) {
@@ -164,33 +210,23 @@ export default class extends React.Component {
         return data.slice(0, indexLast + 1);
     }
 
-    // TODO: Move dataFormattingMethod out of render() and use componentWillReceiveProps().
-    // This should allow us to store the trimmed data for each chart and simply toggle between full/trimmed data.
     render() {
-        let dataFormattingMethod;
-        let metricType = this._getMetricType(this.props.type);
-        let chartType = metricType;
-
-        if (metricType === 'bar') {
-            dataFormattingMethod = this._formatBarData;
-        } else if (metricType === 'line') {
-            if (this._biggestPopulationSize(this.props.unformattedData) >= this.minLinePoints) {
-                dataFormattingMethod = this._formatLineData;
-            } else {
-                dataFormattingMethod = data => this._formatBarData(data, true);
-                chartType = 'bar';
-            }
-        }
-
-        if (!dataFormattingMethod) {
-            return <Error message={`Unsupported metric type: ${this.props.type}`} />;
+        if (this.chartType === 'unsupported') {
+            return <Error message={`Unsupported metric type: ${this.props.type}`} showPageTitle={false} />;
         } else {
+            let dataToShow;
+            if (this.props.showOutliers === false && this.dataPack.trimmed) {
+                dataToShow = this.dataPack.trimmed;
+            } else {
+                dataToShow = this.dataPack.all;
+            }
+
             return (
                 <Chart
                     {...this.props}
 
-                    chartType={chartType}
-                    data={dataFormattingMethod(this.props.unformattedData)}
+                    chartType={this.chartType}
+                    data={dataToShow}
                 />
             );
         }
