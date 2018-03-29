@@ -37,7 +37,7 @@ export default props => {
                 <tbody>
                     {props.visibleExperiments.map((e, index) => (
                         <tr key={index}>
-                            <td><Link to={`/experiments/${e.id}/`}>{e.name || e.slug}</Link></td>
+                            <td><Link to={`/experiments/${e.slug}/`}>{e.name || e.slug}</Link></td>
                             <td>{e.creationDate && dateFormat(e.creationDate, 'longDate', true)}</td>
                         </tr>
                     ))}

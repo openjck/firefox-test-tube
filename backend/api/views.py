@@ -26,11 +26,11 @@ def experiments(request):
 
 
 @api_view(['GET'])
-def experiment_by_id(request, exp_id):
+def experiment_by_slug(request, exp_slug):
     try:
-        dataset = DataSet.objects.visible().get(id=exp_id)
+        dataset = DataSet.objects.visible().get(slug=exp_slug)
     except DataSet.DoesNotExist:
-        raise NotFound('No experiment with given id found.')
+        raise NotFound('No experiment with given slug found.')
 
     data = {
         'id': dataset.id,

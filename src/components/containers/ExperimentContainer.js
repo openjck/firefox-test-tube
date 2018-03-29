@@ -51,6 +51,7 @@ class ExperimentContainer extends React.Component {
     }
 
     componentWillReceiveProps(nextProps) {
+        console.log('nextprops:', nextProps);
         if (this.fetchedMetricIds === false && nextProps.experimentFetch.value.metrics) {
             this.fetchedMetricIds = true;
             this.allMetricIds = nextProps.experimentFetch.value.metrics.map(m => m.id);
@@ -90,7 +91,7 @@ class ExperimentContainer extends React.Component {
 
             return (
                 <Experiment
-                    id={Number(this.props.match.params.experimentId)}
+                    id={experimentFetch.value.id}
                     name={experimentFetch.value.name}
                     slug={experimentFetch.value.slug}
                     description={experimentFetch.value.description}
@@ -118,9 +119,10 @@ class ExperimentContainer extends React.Component {
 ExperimentContainer = withRouter(ExperimentContainer);
 
 export default connect(props => {
-    const id = props.match.params.experimentId;
+    const slug = props.match.params.experimentSlug;
+    console.log('props:', props);
 
     return {
-        experimentFetch: { url: `${process.env.REACT_APP_API_URL}/experiments/${id}/` },
+        experimentFetch: { url: `${process.env.REACT_APP_API_URL}/experiments/${slug}/` },
     };
 })(ExperimentContainer);

@@ -59,6 +59,8 @@ export default class extends React.Component {
             visibleExperiments = visiblePaginatorMembers(sortedExperiments, this.itemsPerPage, this.state.pageNumber);
         }
 
+        console.log('visibleExperiments:', visibleExperiments);
+
         return (
             <ExperimentsTable
                 visibleExperiments={visibleExperiments}
