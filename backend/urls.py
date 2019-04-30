@@ -1,7 +1,6 @@
 from django.urls import include, path, re_path
 
 from .api import views as api_views
-from .views import IndexView
 
 
 urlpatterns = [
@@ -27,7 +26,4 @@ urlpatterns = [
 
     # Auth0
     path('accounts/', include('mozilla_django_oidc.urls')),
-
-    # Send everything else to React
-    re_path(r'.*', IndexView.as_view(), name='index'),
 ]

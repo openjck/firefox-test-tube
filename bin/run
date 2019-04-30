@@ -6,11 +6,6 @@ run_back_end_tests() {
     coverage run ./manage.py test
 }
 
-# TODO
-#run_front_end_tests() {
-    # ./node_modules/gulp/bin/gulp.js test
-#}
-
 case $1 in
     dev)
         # Wait for database to get started.
@@ -32,21 +27,12 @@ case $1 in
     test)
         shift
         coverage erase
-
-        if [[ $1 == "backend" ]]; then
-            run_back_end_tests
-            coverage report -m
-        elif [[ $1 == "frontend" ]]; then
-            run_front_end_tests
+        run_back_end_tests
+        if [[ ! -z ${CI} ]]; then
+            coverage xml
+            bash <(curl -s https://codecov.io/bash) -s /tmp
         else
-            run_back_end_tests
-            run_front_end_tests
-            if [[ ! -z ${CI} ]]; then
-                coverage xml
-                bash <(curl -s https://codecov.io/bash) -s /tmp
-            else
-                coverage report -m
-            fi
+            coverage report -m
         fi
         ;;
     *)

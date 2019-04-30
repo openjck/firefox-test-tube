@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
 
     # 3rd party
     'mozilla_django_oidc',
@@ -133,16 +132,6 @@ USE_L10N = False
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.11/howto/static-files/
-
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    os.path.join(ROOT_DIR, 'build', 'static'),
-]
-STATIC_ROOT = os.path.join(BASE_DIR, 'static_files')
-
-
 # HTTP Security settings
 
 SECURE_BROWSER_XSS_FILTER = True
@@ -194,9 +183,9 @@ OIDC_STORE_ACCESS_TOKEN = True
 
 LOGIN_URL = reverse_lazy('oidc_authentication_init')
 LOGOUT_URL = reverse_lazy('oidc_logout')
-LOGIN_REDIRECT_URL = reverse_lazy('index')
-LOGOUT_REDIRECT_URL = reverse_lazy('index')
-LOGIN_REDIRECT_URL_FAILURE = reverse_lazy('index')
+LOGIN_REDIRECT_URL = reverse_lazy('v2-experiments')
+LOGOUT_REDIRECT_URL = reverse_lazy('v2-experiments')
+LOGIN_REDIRECT_URL_FAILURE = reverse_lazy('v2-experiments')
 
 
 # TODO: Sentry

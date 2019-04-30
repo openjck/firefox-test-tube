@@ -1,4 +1,4 @@
-.PHONY: build clean migrate shell stop test test-backend test-frontend up
+.PHONY: build clean migrate shell stop test up
 
 HOSTUSER := $(shell id -u):$(shell id -g)
 
@@ -10,8 +10,6 @@ help:
 	@echo "  shell         Opens a Bash shell"
 	@echo "  stop          Stops the docker containers"
 	@echo "  test          Runs the Python test suite"
-	@echo "  test-backend  Runs the Python test suite for backend tests only"
-	@echo "  test-frontend Runs the Python test suite for frontend tests only"
 	@echo "  up            Runs the whole stack, served under http://localhost:8000/\n"
 
 build:
@@ -32,12 +30,6 @@ stop:
 
 test:
 	docker-compose run -u ${HOSTUSER} server test
-
-test-backend:
-	docker-compose run -u ${HOSTUSER} server test backend
-
-test-frontend:
-	docker-compose run -u ${HOSTUSER} server test frontend
 
 up:
 	docker-compose up

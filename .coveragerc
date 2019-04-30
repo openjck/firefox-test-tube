@@ -8,7 +8,6 @@ exclude_lines =
 omit =
   backend/api/settings/*
   backend/api/migrations/*
-  backend/templates/*
   backend/wsgi.py
 
 show_missing = True
